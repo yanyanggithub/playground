@@ -161,6 +161,7 @@ bool TicTacToe::isValidPosition(int row, int col) const {
 }
 
 int TicTacToe::getWinner() const {
+    if (checkDraw()) return 0;
     if (!checkWin()) return 0;
     
     // Check each line to find the winner

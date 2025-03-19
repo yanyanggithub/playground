@@ -3,6 +3,7 @@
 #include "game.h"
 #include <vector>
 #include <string>
+#include <memory>
 
 /**
  * TicTacToe game implementation.
@@ -16,6 +17,7 @@
 class TicTacToe : public Game {
 public:
     explicit TicTacToe(int starting_player = 1);
+    ~TicTacToe() override = default;
     
     // Game interface implementation
     void makeMove(int action) override;
@@ -31,6 +33,7 @@ public:
     int getCurrentPlayer() const override;
     int getBoardSize() const override;
     std::string getGameName() const override;
+    int getWinner() const;
     
 private:
     static constexpr int BOARD_SIZE = 3;
@@ -44,6 +47,5 @@ private:
     bool checkDraw() const;
     bool checkLine(const std::vector<std::vector<int>>& board, int start_row, int start_col, int delta_row, int delta_col) const;
     bool isValidPosition(int row, int col) const;
-    int getWinner() const;
     double evaluateLine(int start_row, int start_col, int delta_row, int delta_col) const;
 }; 

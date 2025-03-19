@@ -10,12 +10,45 @@ MCTS::MCTS(const Config& config) : config_(config) {}
 int MCTS::selectAction(Game* game) {
     if (!game) return -1;
     
-    auto root = std::make_unique<MCTSNode>(game->clone());
-    if (!root) return -1;
+    // Check if game is over
+    if (game->isGameOver()) return -1;
     
-    // Get valid actions before starting simulation
+    // Get valid actions
     auto valid_actions = game->getPossibleActions();
     if (valid_actions.empty()) return -1;
+    
+    // First, check for winning moves
+    for (int action : valid_actions) {
+        if (game->isWinningMove(action)) {
+            return action;
+        }
+    }
+    
+    // Then, check for blocking moves
+    for (int action : valid_actions) {
+        auto clone = game->clone();
+        if (!clone) continue;
+        
+        try {
+            clone->makeMove(action);
+            bool blocks = false;
+            for (int opponent_move : clone->getPossibleActions()) {
+                if (clone->isWinningMove(opponent_move)) {
+                    blocks = true;
+                    break;
+                }
+            }
+            if (blocks) {
+                return action;
+            }
+        } catch (const std::exception&) {
+            continue;
+        }
+    }
+    
+    // If no winning or blocking moves, use MCTS
+    auto root = std::make_unique<MCTSNode>(game->clone());
+    if (!root) return -1;
     
     if (config_.num_threads > 1) {
         parallelSimulate(root.get(), config_.num_threads);
@@ -228,8 +261,43 @@ double MCTS::evaluateState(const Game* state) const {
 void MCTS::orderActions(std::vector<int>& actions, const Game* state) const {
     if (!state) return;
     
-    std::sort(actions.begin(), actions.end(),
-        [state](int a, int b) {
-            return state->isWinningMove(a) > state->isWinningMove(b);
-        });
+    // First, find winning moves
+    std::vector<int> winning_moves;
+    std::vector<int> blocking_moves;
+    std::vector<int> other_moves;
+    
+    for (int action : actions) {
+        if (state->isWinningMove(action)) {
+            winning_moves.push_back(action);
+        } else {
+            // Check if this move blocks opponent's winning move
+            auto clone = state->clone();
+            if (!clone) continue;
+            
+            try {
+                clone->makeMove(action);
+                bool blocks = false;
+                for (int opponent_move : clone->getPossibleActions()) {
+                    if (clone->isWinningMove(opponent_move)) {
+                        blocks = true;
+                        break;
+                    }
+                }
+                
+                if (blocks) {
+                    blocking_moves.push_back(action);
+                } else {
+                    other_moves.push_back(action);
+                }
+            } catch (const std::exception&) {
+                other_moves.push_back(action);
+            }
+        }
+    }
+    
+    // Combine moves in priority order
+    actions.clear();
+    actions.insert(actions.end(), winning_moves.begin(), winning_moves.end());
+    actions.insert(actions.end(), blocking_moves.begin(), blocking_moves.end());
+    actions.insert(actions.end(), other_moves.begin(), other_moves.end());
 } 
