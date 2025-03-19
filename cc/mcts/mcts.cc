@@ -13,6 +13,10 @@ int MCTS::selectAction(Game* game) {
     auto root = std::make_unique<MCTSNode>(game->clone());
     if (!root) return -1;
     
+    // Get valid actions before starting simulation
+    auto valid_actions = game->getPossibleActions();
+    if (valid_actions.empty()) return -1;
+    
     if (config_.num_threads > 1) {
         parallelSimulate(root.get(), config_.num_threads);
     } else {
@@ -43,6 +47,12 @@ int MCTS::selectAction(Game* game) {
                 best_action = child->parent_action;
             }
         }
+    }
+
+    // Validate the selected action
+    if (best_action < 0 || std::find(valid_actions.begin(), valid_actions.end(), best_action) == valid_actions.end()) {
+        // If no valid action found, select a random valid action
+        best_action = valid_actions[rand() % valid_actions.size()];
     }
 
     return best_action;
@@ -98,13 +108,32 @@ MCTSNode* MCTS::expand(MCTSNode* node) {
     }
     
     std::lock_guard<std::mutex> lock(node->mutex);
-    int action = node->untried_actions.back();
-    node->untried_actions.pop_back();
+    
+    // Get valid actions
+    auto valid_actions = node->game_state->getPossibleActions();
+    if (valid_actions.empty()) return node;
+    
+    // Find a valid action from untried actions
+    int action = -1;
+    while (!node->untried_actions.empty()) {
+        action = node->untried_actions.back();
+        if (std::find(valid_actions.begin(), valid_actions.end(), action) != valid_actions.end()) {
+            node->untried_actions.pop_back();
+            break;
+        }
+        node->untried_actions.pop_back();
+    }
+    
+    if (action == -1) return node;
     
     auto child_state = node->game_state->clone();
     if (!child_state) return node;
     
-    child_state->makeMove(action);
+    try {
+        child_state->makeMove(action);
+    } catch (const std::exception&) {
+        return node;
+    }
     
     auto child = new MCTSNode(std::move(child_state), action, node);
     if (!child) return node;
@@ -127,8 +156,20 @@ int MCTS::simulate(MCTSNode* node) {
             orderActions(actions, simulation.get());
         }
         
-        int action = actions[rand() % actions.size()];
-        simulation->makeMove(action);
+        // Try to make a valid move
+        bool move_made = false;
+        for (int attempts = 0; attempts < actions.size() && !move_made; ++attempts) {
+            int action = actions[rand() % actions.size()];
+            try {
+                simulation->makeMove(action);
+                move_made = true;
+            } catch (const std::exception&) {
+                // Remove invalid action and try another
+                actions.erase(std::remove(actions.begin(), actions.end(), action), actions.end());
+            }
+        }
+        
+        if (!move_made) break;
     }
     
     if (config_.use_heuristic) {

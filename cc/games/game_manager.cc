@@ -1,5 +1,6 @@
 #include "game_manager.h"
 #include "connect_four.h"
+#include "tic_tac_toe.h"
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -37,7 +38,18 @@ bool GameManager::makeAIMove() {
     int action = ai->selectAction(game.get());
     if (action < 0) return false;
     
-    return makeMove(action);
+    // Validate the move before making it
+    auto actions = game->getPossibleActions();
+    if (std::find(actions.begin(), actions.end(), action) == actions.end()) {
+        return false;
+    }
+    
+    try {
+        game->makeMove(action);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
 }
 
 bool GameManager::isGameOver() const {
@@ -100,7 +112,8 @@ std::string GameManager::getGameType() const {
 std::unique_ptr<Game> GameManager::createGame(const std::string& type, int starting_player) {
     if (type == "connect_four") {
         return std::make_unique<ConnectFour>(starting_player);
+    } else if (type == "tic_tac_toe") {
+        return std::make_unique<TicTacToe>(starting_player);
     }
-    // Add more game types here
     return nullptr;
 } 

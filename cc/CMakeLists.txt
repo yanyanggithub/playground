@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SOURCES
     main.cc
     games/connect_four.cc
+    games/tic_tac_toe.cc
     games/game_manager.cc
     mcts/mcts.cc
 )
@@ -16,6 +17,7 @@ set(SOURCES
 set(HEADERS
     games/game.h
     games/connect_four.h
+    games/tic_tac_toe.h
     games/game_manager.h
     mcts/mcts.h
 )

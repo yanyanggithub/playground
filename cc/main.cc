@@ -9,12 +9,34 @@ int main() {
     std::mt19937 gen(rd());
     std::srand(gen());
     
-    // Create game manager
-    GameManager manager("connect_four", 2);  // AI plays as player 2
+    // Game selection
+    std::cout << "Select a game to play:" << std::endl;
+    std::cout << "1. Connect Four" << std::endl;
+    std::cout << "2. Tic Tac Toe" << std::endl;
     
-    std::cout << "Welcome to Connect Four!" << std::endl;
+    std::string game_choice;
+    std::getline(std::cin, game_choice);
+    
+    std::string game_type;
+    std::string move_instructions;
+    
+    if (game_choice == "1") {
+        game_type = "connect_four";
+        move_instructions = "Enter column number (0-6) to make a move";
+    } else if (game_choice == "2") {
+        game_type = "tic_tac_toe";
+        move_instructions = "Enter position (0-8) to make a move";
+    } else {
+        std::cout << "Invalid choice. Exiting..." << std::endl;
+        return 1;
+    }
+    
+    // Create game manager
+    GameManager manager(game_type, 2);  // AI plays as player 2
+    
+    std::cout << "\nWelcome to " << (game_type == "connect_four" ? "Connect Four" : "Tic Tac Toe") << "!" << std::endl;
     std::cout << "You are player 1 (X), AI is player 2 (O)" << std::endl;
-    std::cout << "Enter column number (0-6) to make a move" << std::endl;
+    std::cout << move_instructions << std::endl;
     std::cout << "Enter 's' to save game, 'l' to load game, 'q' to quit" << std::endl << std::endl;
     
     while (!manager.isGameOver()) {
