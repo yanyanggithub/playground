@@ -135,7 +135,7 @@ int MCTS::simulate(MCTSNode* node) {
         return evaluateState(simulation.get());
     }
     
-    return simulation->getReward(node->game_state->player);
+    return simulation->getReward(simulation->getCurrentPlayer());
 }
 
 void MCTS::backpropagate(MCTSNode* node, int reward) {
@@ -181,7 +181,7 @@ void MCTS::workerThread(MCTSNode* root, int num_simulations) {
 
 double MCTS::evaluateState(const Game* state) const {
     if (!state) return 0.0;
-    return state->getReward(state->player);
+    return state->getReward(state->getCurrentPlayer());
 }
 
 void MCTS::orderActions(std::vector<int>& actions, const Game* state) const {

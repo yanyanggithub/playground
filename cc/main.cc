@@ -1,51 +1,90 @@
-#include "games/tictactoe.h"
-#include "mcts/mcts.h"
+#include "games/game_manager.h"
 #include <iostream>
-#include <memory>
+#include <string>
 #include <random>
 
 int main() {
+    // Initialize random number generator
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::srand(gen()); // Seed the global random number generator
+    std::srand(gen());
     
-    // Create game instance
-    auto game = std::make_unique<TicTacToe>(1);
+    // Create game manager
+    GameManager manager("connect_four", 2);  // AI plays as player 2
     
-    // Configure MCTS
-    MCTS::Config config;
-    config.num_simulations = 1000;
-    config.num_threads = std::thread::hardware_concurrency();
-    config.use_heuristic = true;
-    config.use_move_ordering = true;
+    std::cout << "Welcome to Connect Four!" << std::endl;
+    std::cout << "You are player 1 (X), AI is player 2 (O)" << std::endl;
+    std::cout << "Enter column number (0-6) to make a move" << std::endl;
+    std::cout << "Enter 's' to save game, 'l' to load game, 'q' to quit" << std::endl << std::endl;
     
-    MCTS mcts(config);
-    
-    // Game loop
-    while (!game->isGameOver()) {
-        game->printState();
+    while (!manager.isGameOver()) {
+        manager.printState();
         
-        std::vector<int> actions = game->getPossibleActions();
-        if (actions.empty()) break;
-
-        int action = mcts.selectAction(game.get());
-        if (action >= 0 && action < TicTacToe::BOARD_SIZE) {
-            game->makeMove(action);
+        std::cout << "Current player: " << manager.getCurrentPlayer() << std::endl;
+        
+        if (manager.getCurrentPlayer() == 1) {
+            // Human player's turn
+            std::string input;
+            std::cout << "Enter your move: ";
+            std::getline(std::cin, input);
+            
+            if (input == "q") break;
+            if (input == "s") {
+                std::string filename;
+                std::cout << "Enter filename to save: ";
+                std::getline(std::cin, filename);
+                if (manager.saveGame(filename)) {
+                    std::cout << "Game saved successfully!" << std::endl;
+                } else {
+                    std::cout << "Failed to save game." << std::endl;
+                }
+                continue;
+            }
+            if (input == "l") {
+                std::string filename;
+                std::cout << "Enter filename to load: ";
+                std::getline(std::cin, filename);
+                if (manager.loadGame(filename)) {
+                    std::cout << "Game loaded successfully!" << std::endl;
+                } else {
+                    std::cout << "Failed to load game." << std::endl;
+                }
+                continue;
+            }
+            
+            try {
+                int action = std::stoi(input);
+                if (!manager.makeMove(action)) {
+                    std::cout << "Invalid move! Try again." << std::endl;
+                    continue;
+                }
+            } catch (const std::exception& e) {
+                std::cout << "Invalid input! Try again." << std::endl;
+                continue;
+            }
         } else {
-            break;
+            // AI's turn
+            std::cout << "AI is thinking..." << std::endl;
+            if (!manager.makeAIMove()) {
+                std::cout << "AI failed to make a move!" << std::endl;
+                break;
+            }
         }
     }
-
-    // Game over
-    std::cout << "Game Over!" << std::endl;
-    game->printState();
     
-    int winner = game->getReward(1) == 1 ? 1 : (game->getReward(2) == 1 ? 2 : 0);
-    if (winner == 0) {
-        std::cout << "It's a draw!" << std::endl;
+    // Game over
+    std::cout << "\nGame Over!" << std::endl;
+    manager.printState();
+    
+    // Determine winner
+    int winner = manager.getCurrentPlayer() == 1 ? 2 : 1;
+    if (winner == 1) {
+        std::cout << "Congratulations! You won!" << std::endl;
+    } else if (winner == 2) {
+        std::cout << "AI wins!" << std::endl;
     } else {
-        std::cout << "Player " << winner << " wins!" << std::endl;
+        std::cout << "It's a draw!" << std::endl;
     }
-
+    
     return 0;
 } 
